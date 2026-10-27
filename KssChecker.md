@@ -1,394 +1,334 @@
-# PROMPT XÂY DỰNG PHẦN MỀM QUẢN LÝ VÀ GIÁM SÁT MẠNG NỘI BỘ
+# PROMPT XÂY DỰNG CÔNG CỤ KSS CHECKER BẰNG POWERSHELL + WINFORMS
 
-## 1. Vai trò và mục tiêu dự án
+## 1. Vai trò
 
-Bạn là chuyên gia lập trình phần mềm Windows Desktop, có kinh nghiệm về quản trị mạng LAN, TCP/IP, ICMP Ping, DNS, DHCP, ARP, Windows Networking, quản lý thiết bị đầu cuối và thiết kế giao diện phần mềm quản trị hệ thống CNTT.
+Bạn là chuyên gia phát triển ứng dụng Windows bằng PowerShell, Windows Forms (WinForms), quản trị hệ thống, giám sát mạng và tự động hóa nghiệp vụ CNTT.
+- Windows PowerShell 5.1.
+- Windows Forms thông qua `System.Windows.Forms`.
+- System.Drawing để thiết kế giao diện.
+- Các API .NET và Windows có sẵn để truy vấn mạng, thiết bị và hệ thống.
+- CSV làm nguồn dữ liệu đầu vào khi phù hợp với mã nguồn gốc.
 
-Hãy phân tích hình ảnh giao diện tham chiếu do tôi cung cấp và xây dựng một phần mềm hoàn chỉnh có tên:
+Sản phẩm chính phải là một file PowerShell `.ps1` có thể chạy trực tiếp trên Windows. Có thể tạo thêm file cấu hình, CSV mẫu, thư viện hỗ trợ hoặc script triển khai nếu thực sự cần thiết, nhưng không được bắt buộc người dùng phải chuyển sang một nền tảng lập trình khác.
 
-**LAN Network Manager – Công cụ quản lý và giám sát mạng nội bộ**
+## 2. Nguyên tắc xây dựng công cụ
 
-Mục tiêu là xây dựng một công cụ dành cho cán bộ CNTT sử dụng trong mạng LAN nội bộ tại các cơ quan, đơn vị, có khả năng:
+Trước khi viết mã, hãy lập danh sách đầy đủ:
 
-- Quản lý danh sách máy tính, máy chủ và thiết bị mạng thông qua địa chỉ IP.
-- Kiểm tra trạng thái kết nối mạng theo thời gian thực.
-- Quét, phát hiện và thu thập thông tin thiết bị trong mạng nội bộ.
-- Hiển thị kết quả Ping, thông tin IP, Gateway, DNS và các thông số mạng liên quan.
-- Theo dõi trạng thái thiết bị, các dịch vụ và tiến trình chẩn đoán mạng.
-- Cung cấp các cửa sổ chức năng riêng biệt để theo dõi kết quả thực thi.
-- Ghi nhật ký hoạt động và hỗ trợ cán bộ CNTT xác định nhanh các sự cố kết nối.
+- Các hàm và chức năng hiện có.
+- Cấu trúc giao diện chính.
+- Các cửa sổ chức năng.
+- Biến script-scope và trạng thái dùng chung.
+- Timer, event handler, background job và tác vụ bất đồng bộ.
+- Cách đọc dữ liệu CSV.
+- Các đường dẫn dữ liệu và phụ thuộc bên ngoài.
+- Thuật toán Ping, Tracert, nhận diện mạng, sao lưu và phục hồi.
+- Những lỗi tiềm ẩn hoặc điểm có thể gây treo giao diện, rò rỉ tài nguyên và sai kết quả.
 
-Phần mềm phải hoạt động ổn định trên Windows 10 và Windows 11, ưu tiên sử dụng ít tài nguyên, phản hồi nhanh và không bị treo giao diện khi thực hiện nhiều tác vụ đồng thời.
+Đối chiếu từng chức năng của phiên bản mới với phiên bản gốc.
 
-## 2. Công nghệ lập trình đề xuất
+Không tự ý bỏ chức năng, thay đổi quy tắc nghiệp vụ, đổi tên trường dữ liệu hoặc thay đổi cấu trúc thư mục sao lưu nếu chưa xác minh ảnh hưởng.
 
-Sử dụng các công nghệ sau:
+Nếu không có đủ dữ liệu để xác định chính xác một chức năng, hãy ghi rõ điểm chưa xác minh và tiếp tục triển khai các phần đã xác định được.
 
-- **Ngôn ngữ:** C#.
-- **Framework:** .NET 8 LTS hoặc phiên bản .NET LTS còn được hỗ trợ phù hợp với môi trường triển khai.
-- **Giao diện:** Windows Forms (WinForms).
-- **IDE:** Visual Studio 2022 hoặc phiên bản tương thích.
-- **Kiểm tra kết nối:** `System.Net.NetworkInformation.Ping`.
-- **Thông tin mạng:** Các API có sẵn trong .NET, DNS, NetworkInterface và các công cụ Windows phù hợp.
-- **Xử lý tác vụ:** `async/await`, `Task`, `CancellationToken`, `PeriodicTimer` hoặc cơ chế tương đương.
-- **Lưu cấu hình:** JSON hoặc CSV.
-- **Lưu nhật ký:** File log UTF-8 có ngày giờ.
-- **Biểu tượng giao diện:** SVG, icon hoặc bộ biểu tượng hiện đại phù hợp với ứng dụng quản trị mạng.
+## 3. Xây dựng giao diện WinForms
 
-Ưu tiên các thư viện có sẵn trong .NET. Chỉ sử dụng thư viện bên ngoài khi thực sự cần thiết; phải nêu rõ mục đích và giấy phép sử dụng.
+Tạo giao diện desktop theo phong cách công cụ quản trị CNTT, bố cục gọn gàng, dễ thao tác, sử dụng font Segoe UI và màu sắc thống nhất.
+Giao diện chính phải cung cấp các nút chức năng:
 
-Ứng dụng phải có thể biên dịch, chạy độc lập trên máy Windows theo cấu hình triển khai đã lựa chọn. Ưu tiên hỗ trợ xuất bản dạng self-contained, không yêu cầu người dùng cài đặt môi trường lập trình.
+1. Thông tin card mạng.
+2. Kiểm tra kết nối mạng.
+3. Quản lý cổng COM và USB.
+4. Quản lý máy in, photo và scanner.
+5. Quản lý ứng dụng đang chạy.
+6. Thông tin cấu hình máy tính.
+7. Sao lưu profile người dùng.
+8. Phục hồi profile người dùng.
 
-## 3. Phân tích và thiết kế giao diện theo hình ảnh tham chiếu
-
-Sử dụng hình ảnh tôi cung cấp làm cơ sở thiết kế giao diện. Giữ phong cách của phần mềm quản trị mạng Windows truyền thống: cửa sổ nhỏ gọn, nhiều bảng dữ liệu, thanh công cụ màu xanh, các nút chức năng rõ ràng và các cửa sổ kết quả chẩn đoán riêng biệt.
-
-Không sao chép máy móc các chi tiết không thể đọc được từ hình ảnh có độ phân giải thấp. Hãy xây dựng giao diện tương đương về bố cục, chức năng và trải nghiệm sử dụng, đồng thời nâng cấp tính thẩm mỹ.
-
-### 3.1. Cửa sổ chính – Main Dashboard
-
-Cửa sổ chính gồm các thành phần:
-
-- Thanh tiêu đề hiển thị tên ứng dụng và phiên bản.
-- Thanh công cụ gồm các chức năng quản lý thiết bị, quét mạng, kiểm tra kết nối, cấu hình và nhật ký.
-- Khu vực tổng quan số lượng thiết bị, thiết bị đang hoạt động, thiết bị mất kết nối và tác vụ đang thực hiện.
-- Khu vực điều khiển nhanh để bắt đầu, tạm dừng hoặc dừng các tác vụ kiểm tra.
-- Thanh trạng thái hiển thị trạng thái ứng dụng, thời điểm cập nhật dữ liệu và số lượng thiết bị đang được giám sát.
-
-Bố cục cần có khả năng co giãn theo kích thước cửa sổ. Ưu tiên sử dụng `SplitContainer`, `TableLayoutPanel`, `Panel` và `DataGridView` để tổ chức giao diện.
-
-### 3.2. Cửa sổ quản lý danh sách IP
-
-Thiết kế cửa sổ tương tự khu vực phía trên bên trái của ảnh tham chiếu.
-
-Các thành phần:
-
-- Ô nhập địa chỉ IP hoặc tên máy tính.
-- Ô tìm kiếm, lọc danh sách.
-- Nút thêm, sửa, xóa thiết bị.
-- Nút Ping, kiểm tra kết nối và làm mới.
-- Bảng danh sách thiết bị.
-
-Bảng dữ liệu gồm các cột:
-
-| Tên cột | Mô tả |
-|---|---|
-| STT | Số thứ tự |
-| Loại thiết bị | Máy trạm, máy chủ, switch, router hoặc thiết bị khác |
-| Tên thiết bị | Tên máy tính hoặc tên do quản trị viên đặt |
-| Địa chỉ IP | Địa chỉ IPv4 hoặc IPv6 phù hợp với chức năng |
-| Trạng thái | Online, Offline, Đang kiểm tra hoặc Lỗi |
-| Thời gian phản hồi | Độ trễ Ping gần nhất |
-| Thao tác | Ping, xem chi tiết, chỉnh sửa |
-
-Sử dụng màu sắc để nhận diện trạng thái: xanh lá cho kết nối thành công, đỏ cho mất kết nối, vàng cho đang kiểm tra và xám cho trạng thái chưa xác định.
-
-Cho phép nhập danh sách thiết bị từ file CSV có cấu trúc:
-
-`LOAI,TEN,IP`
-
-Hỗ trợ lưu và tải danh sách thiết bị để không phải nhập lại sau mỗi lần khởi động.
-
-### 3.3. Cửa sổ quét mạng và phát hiện thiết bị
-
-Thiết kế cửa sổ tương tự khu vực phía trên bên phải ảnh tham chiếu.
-
-Chức năng:
-
-- Nhập dải IP hoặc subnet cần kiểm tra.
-- Chọn số lượng tác vụ đồng thời.
-- Chọn thời gian chờ phản hồi.
-- Bắt đầu, tạm dừng và dừng quá trình quét.
-- Hiển thị tiến độ thực hiện.
-- Lọc thiết bị đang hoạt động và xuất kết quả.
-
-Các trường thông tin:
-
-- Địa chỉ IP.
-- Tên máy chủ DNS nếu phân giải được.
-- MAC address nếu có thể thu thập hợp lệ từ mạng cục bộ.
-- Trạng thái phản hồi.
-- Thời gian phản hồi.
-- Thông tin nhà sản xuất theo OUI nếu có dữ liệu tra cứu cục bộ.
-- Thời điểm phát hiện gần nhất.
-
-Chỉ thực hiện quét trên các dải địa chỉ được quản trị viên cho phép. Không mặc định quét toàn bộ mạng khi chưa có cấu hình.
-
-Lưu ý kỹ thuật: Ping không thành công không đồng nghĩa thiết bị chắc chắn đã tắt. Một số thiết bị có thể chặn ICMP hoặc áp dụng chính sách tường lửa. Phải thể hiện trạng thái theo đúng kết quả thu thập được.
-
-### 3.4. Cửa sổ Ping Monitor
-
-Thiết kế một cửa sổ riêng để hiển thị kết quả kiểm tra kết nối, tương tự cửa sổ phía dưới bên trái của ảnh.
-
-Nội dung gồm:
-
-- Danh sách IP được kiểm tra.
-- Thời điểm gửi gói tin.
-- Trạng thái phản hồi.
-- Thời gian phản hồi tính bằng ms.
-- TTL nếu hệ điều hành cung cấp.
-- Số lần thành công, thất bại và tỷ lệ mất gói.
-- Tổng thời gian giám sát.
-
-Các nút điều khiển:
-
-- Bắt đầu Ping.
-- Tạm dừng.
-- Dừng.
-- Xóa kết quả.
-- Xuất nhật ký.
-
-Yêu cầu kỹ thuật:
-
-- Mỗi lần kiểm tra mặc định gửi tối đa 2 gói ICMP cho mỗi thiết bị.
-- Cho phép thay đổi số gói và khoảng thời gian kiểm tra trong phần cấu hình.
-- Không gửi Ping liên tục không giới hạn với tần suất quá cao.
-- Có thể giám sát nhiều IP đồng thời nhưng phải giới hạn số tác vụ song song.
-- Không sử dụng vòng lặp đồng bộ làm treo giao diện.
-- Hiển thị kết quả ngay khi có phản hồi.
-- Khi bấm Dừng, phải hủy các tác vụ đang chờ thông qua `CancellationToken` hoặc cơ chế hủy tương đương.
-- Không ghi đè dữ liệu của thiết bị này lên thiết bị khác khi nhiều tác vụ trả kết quả đồng thời.
-
-Mỗi bản ghi log cần có thời gian, địa chỉ IP, kết quả, độ trễ và thông báo lỗi nếu có.
-
-### 3.5. Cửa sổ thông tin mạng của máy tính
-
-Thiết kế cửa sổ hiển thị thông tin mạng tương tự khu vực bên phải của hình ảnh.
-
-Tự động thu thập các thông tin có thể truy xuất hợp lệ từ máy đang chạy ứng dụng:
-
-- Hostname.
-- Tên người dùng Windows hiện tại.
-- Danh sách card mạng.
-- Địa chỉ IPv4 và IPv6.
-- Subnet mask hoặc prefix length.
-- Default Gateway.
-- DNS Server.
-- Địa chỉ MAC.
-- DHCP Enabled.
-- Trạng thái kết nối card mạng.
-- Địa chỉ IP nguồn được hệ điều hành lựa chọn khi kết nối đến một đích cụ thể.
-- Thông tin route và bảng ARP nếu người dùng có đủ quyền truy cập.
-
-Bố trí thông tin theo từng nhóm, dễ đọc, có nút sao chép và làm mới.
-
-Đối với dữ liệu cần quyền quản trị, hãy hiển thị thông báo yêu cầu quyền phù hợp thay vì làm ứng dụng lỗi.
-
-### 3.6. Cửa sổ danh sách dịch vụ và tiến trình chẩn đoán
-
-Thiết kế cửa sổ tương tự khu vực trung tâm phía dưới ảnh tham chiếu.
-
-Bảng gồm các cột:
-
-- STT.
-- Tên chức năng.
-- Trạng thái.
-- Nội dung kết quả.
-- Thời gian thực hiện.
-- Nút thao tác.
-
-Các chức năng có thể bao gồm:
-
-1. Kiểm tra kết nối Gateway.
-2. Kiểm tra kết nối DNS.
-3. Kiểm tra phân giải tên miền.
-4. Kiểm tra kết nối đến máy chủ nội bộ.
-5. Kiểm tra một cổng TCP được quản trị viên cấu hình.
-6. Thu thập thông tin card mạng.
-7. Thu thập thông tin route.
-8. Kiểm tra trạng thái các dịch vụ Windows được cấu hình.
-9. Kiểm tra khả năng truy cập tài nguyên mạng được phép.
-10. Tổng hợp kết quả chẩn đoán.
-
-Mỗi chức năng phải có trạng thái riêng: Chưa chạy, Đang chạy, Thành công, Cảnh báo, Thất bại hoặc Đã hủy.
-
-Không được mặc định mọi dịch vụ Windows đều cần chạy. Chỉ kiểm tra các dịch vụ liên quan đến chức năng đã được cấu hình.
-
-Không tự động dừng dịch vụ, sửa cấu hình IP, thay đổi DNS, sửa firewall hoặc thực hiện thao tác ảnh hưởng đến hệ thống. Các thao tác thay đổi cấu hình phải có chức năng riêng, kiểm tra quyền, cảnh báo và yêu cầu xác nhận của người dùng.
-
-### 3.7. Cửa sổ kết quả lệnh và nhật ký
-
-Thiết kế cửa sổ tương tự khu vực phía dưới bên phải ảnh tham chiếu.
+Mỗi chức năng mở cửa sổ riêng tương tự cách tổ chức trong mã nguồn gốc.
 
 Yêu cầu:
 
-- Hiển thị kết quả chẩn đoán theo thời gian thực.
-- Có thời gian bắt đầu và kết thúc tác vụ.
-- Hiển thị lệnh hoặc tên thao tác đã thực hiện.
-- Phân biệt thông tin, cảnh báo và lỗi.
-- Có nút Xóa log, Sao chép và Xuất file.
-- Tự động cuộn đến nội dung mới nhất nhưng cho phép người dùng tắt tự động cuộn.
-- Giới hạn số dòng hiển thị nhằm tránh sử dụng quá nhiều RAM.
-- Lưu log xuống file UTF-8 theo ngày.
+- Các nút có tên rõ ràng, có thể thêm biểu tượng phù hợp.
+- Hiển thị trạng thái hoạt động và thông báo lỗi.
+- Không để giao diện bị treo khi đang truy vấn hệ thống hoặc mạng.
+- Xử lý sự kiện đóng cửa sổ đúng cách.
+- Dừng timer và giải phóng tài nguyên khi không còn sử dụng.
+- Hỗ trợ màn hình có độ phân giải khác nhau.
+- Tương thích với môi trường Windows PowerShell 5.1.
 
-Nếu sử dụng các công cụ Windows như `ipconfig`, `route`, `arp`, `nslookup` hoặc `tracert`, hãy gọi thông qua danh sách thao tác được định nghĩa trước, không ghép chuỗi đầu vào của người dùng thành lệnh hệ thống tùy ý.
+## 4. Chức năng thông tin card mạng
 
-Phải đọc stdout và stderr không gây deadlock, có timeout, hỗ trợ hủy và xử lý tiến trình con khi người dùng dừng tác vụ.
+Có thể có các hàm chức năng `Get-NetworkInfo`, `Convert-PrefixToSubnetMask` và `Show-NetworkCardDialog`.
 
-## 4. Thiết kế kiến trúc phần mềm
+Thu thập các thông tin:
 
-Tổ chức dự án theo cấu trúc dễ bảo trì, không viết toàn bộ chức năng vào một lớp Form duy nhất.
+- Tên card mạng.
+- Trạng thái kết nối.
+- Tốc độ liên kết.
+- IPv4.
+- Subnet mask.
+- Default gateway.
+- DNS.
+- DHCP hoặc IP tĩnh.
+- Interface index nếu cần.
 
-Đề xuất cấu trúc:
+Tạo một mảng và biến để lưu các dải mạng `10.56.208.*`, `10.56.240.*`, `10.56.2.*`,... đã được định nghĩa.
 
-```text
-LANNetworkManager/
-├── Program.cs
-├── Forms/
-│   ├── MainForm.cs
-│   ├── DeviceManagerForm.cs
-│   ├── NetworkScannerForm.cs
-│   ├── PingMonitorForm.cs
-│   ├── NetworkInfoForm.cs
-│   ├── DiagnosticsForm.cs
-│   └── LogViewerForm.cs
-├── Models/
-│   ├── NetworkDevice.cs
-│   ├── PingResult.cs
-│   ├── NetworkAdapterInfo.cs
-│   ├── DiagnosticResult.cs
-│   └── AppSettings.cs
-├── Services/
-│   ├── PingService.cs
-│   ├── NetworkScanService.cs
-│   ├── NetworkInfoService.cs
-│   ├── DnsService.cs
-│   ├── TcpCheckService.cs
-│   └── DiagnosticService.cs
-├── Data/
-│   ├── DeviceRepository.cs
-│   ├── CsvService.cs
-│   └── SettingsService.cs
-├── Logging/
-│   └── AppLogger.cs
-├── Resources/
-├── Config/
-└── README.md
-```
+Phải sao chép đầy đủ bảng ánh xạ mạng và tên đơn vị từ mã nguồn gốc. Không tự suy đoán các dải IP còn thiếu.
 
-Có thể điều chỉnh cấu trúc nếu cần, nhưng phải đảm bảo tách biệt giao diện, xử lý nghiệp vụ, dữ liệu và nhật ký.
+Cập nhật thông tin tự động mỗi 3 giây hoặc theo đúng khoảng thời gian hiện tại của bản gốc.
 
-## 5. Yêu cầu về hiệu năng và độ ổn định
+Xử lý đúng máy có nhiều card mạng, card VPN, card ảo và card không có gateway. Không mặc định card đầu tiên là card có kết nối Internet.
 
-Đây là yêu cầu bắt buộc:
+## 5. Chức năng kiểm tra kết nối mạng
 
-1. Giao diện luôn phản hồi khi quét mạng hoặc Ping nhiều thiết bị.
-2. Không gọi các thao tác mạng đồng bộ trực tiếp trên UI thread.
-3. Giới hạn concurrency để tránh quá tải máy tính và mạng.
-4. Hủy tác vụ đúng cách khi đóng cửa sổ hoặc thoát chương trình.
-5. Không tạo hàng nghìn tác vụ cùng lúc khi quét subnet lớn.
-6. Có timeout cho các thao tác mạng và tiến trình ngoài.
-7. Xử lý ngoại lệ ở từng lớp, ghi log và hiển thị thông báo thân thiện.
-8. Không sử dụng vòng lặp kiểm tra liên tục không có khoảng nghỉ.
-9. Không làm mất danh sách thiết bị hoặc cấu hình khi khởi động lại.
-10. Có thể chạy ứng dụng trong môi trường mạng không có Internet.
-11. Hỗ trợ tiếng Việt có dấu, không lỗi font hoặc mã hóa CSV.
-12. Tự giải phóng tài nguyên, timer, socket và tiến trình khi đóng ứng dụng.
+Định nghĩa hàm `Load-DeviceIPData` và `Show-NetworkCheckDialog`.
 
-Không tuyên bố thiết bị Online chỉ dựa vào dữ liệu cũ. Mỗi kết quả cần có thời điểm kiểm tra cuối cùng và trạng thái hết hạn nếu không được cập nhật trong khoảng thời gian cấu hình.
+Đọc danh sách thiết bị từ `DeviceIP.csv` với các trường chính `DEVICE` và `IP`, sau khi xác minh cấu trúc file thực tế.
 
-## 6. Yêu cầu về giao diện và trải nghiệm người dùng
+Hiển thị bảng gồm:
 
-- Giao diện Windows Desktop hiện đại, gọn nhẹ, phù hợp cho cán bộ CNTT.
-- Có thể mở các cửa sổ chức năng đồng thời.
-- Không để các cửa sổ con che khuất hoàn toàn cửa sổ chính.
-- Có thể thay đổi kích thước cửa sổ.
-- Các bảng hỗ trợ sắp xếp, lọc và tự động điều chỉnh cột.
-- Có trạng thái trực quan bằng màu sắc và biểu tượng.
-- Các nút thao tác phải có chức năng thực tế.
-- Có hộp thoại xác nhận đối với thao tác xóa hoặc thay đổi dữ liệu.
-- Lưu lại vị trí và kích thước cửa sổ nếu phù hợp.
-- Hỗ trợ chế độ sáng/tối nếu triển khai được mà không làm phức tạp hoặc giảm hiệu năng ứng dụng.
-- Hiển thị phiên bản phần mềm và thông tin tác giả ở khu vực phù hợp.
+- Tên thiết bị.
+- IP.
+- Kết quả Ping.
+- Độ trễ.
+- Nút Tracert.
+- Trạng thái và thời điểm kiểm tra.
 
-Ưu tiên sử dụng `DataGridView` được cấu hình tốt, tránh hiệu ứng đồ họa nặng và tránh cập nhật toàn bộ bảng mỗi khi có một kết quả Ping mới.
+### Ping tự động
 
-## 7. Yêu cầu về bảo mật
+Giữ nguyên nghiệp vụ cơ bản của công cụ gốc:
 
-- Chỉ sử dụng công cụ trong mạng nội bộ được phép quản lý.
-- Không thu thập mật khẩu, thông tin xác thực hoặc dữ liệu cá nhân không cần thiết.
-- Không gửi thông tin thiết bị đến dịch vụ bên ngoài.
-- Không tự động tải hoặc thực thi mã từ Internet.
-- Không lưu thông tin nhạy cảm trong log.
-- Không yêu cầu quyền Administrator nếu chức năng hiện tại không cần.
-- Kiểm tra và xác thực địa chỉ IP, subnet, cổng TCP, đường dẫn file và dữ liệu nhập vào.
-- Giới hạn các lệnh hệ thống trong danh sách được kiểm soát.
-- Có thể cấu hình dải mạng được phép kiểm tra và số tác vụ đồng thời.
-- Không thực hiện quét cổng diện rộng hoặc thay đổi cấu hình thiết bị ngoài phạm vi được cấp phép.
+- Đọc danh sách thiết bị từ CSV.
+- Ping mỗi thiết bị tối đa 2 lần trong một chu kỳ.
+- Nếu có phản hồi thành công, hiển thị độ trễ tốt nhất.
+- Nếu không có phản hồi, hiển thị trạng thái thất bại.
+- Tự động lặp lại quá trình kiểm tra theo chu kỳ hiện có của mã nguồn.
+- Có thể dừng khi đóng cửa sổ.
 
-## 8. Yêu cầu kiểm thử
+Không để các chu kỳ Ping chồng lấn hoặc tạo quá nhiều tác vụ đồng thời.
 
-Tạo dữ liệu thử nghiệm và kiểm tra tối thiểu các trường hợp sau:
+Sử dụng `System.Net.NetworkInformation.Ping` hoặc cơ chế tương đương trong .NET. Có timeout rõ ràng, xử lý ngoại lệ và giải phóng đối tượng Ping.
 
-- IP hợp lệ, IP không hợp lệ.
-- Thiết bị phản hồi Ping.
-- Thiết bị không phản hồi Ping.
-- Thiết bị chặn ICMP nhưng vẫn có thể truy cập qua TCP.
-- Không có card mạng hoặc card mạng bị ngắt kết nối.
-- DNS phân giải thành công và thất bại.
-- Gateway không phản hồi.
-- File CSV thiếu cột, sai định dạng hoặc có ký tự tiếng Việt.
-- Người dùng nhấn Dừng trong lúc quét mạng.
-- Người dùng đóng cửa sổ trong lúc tác vụ đang chạy.
-- Nhiều tác vụ hoàn thành cùng lúc.
-- Không có quyền quản trị.
-- Tiến trình hệ thống bị timeout hoặc trả về lỗi.
-- Chạy ứng dụng liên tục trong thời gian dài.
+Không kết luận thiết bị chắc chắn đã tắt chỉ vì không phản hồi ICMP.
 
-Mỗi trường hợp phải có kết quả mong đợi, thông báo lỗi phù hợp và không làm ứng dụng bị treo.
+### Ping thủ công
 
-## 9. Sản phẩm đầu ra bắt buộc
+Định nghĩa `Show-PingDialog`:
 
-Hãy cung cấp đầy đủ các sản phẩm sau:
+- Cho phép nhập IP hoặc hostname.
+- Thực hiện Ping liên tục.
+- Hiển thị thời gian phản hồi, kết quả và lỗi.
+- Có nút dừng/đóng.
+- Giải phóng Timer và đối tượng Ping khi kết thúc.
 
-1. Mã nguồn C# hoàn chỉnh của dự án.
-2. File `.csproj` với các cấu hình cần thiết.
-3. Mã nguồn tất cả Form, Model, Service và Repository.
-4. Giao diện được tạo bằng mã hoặc Designer, đảm bảo các thành phần hiển thị đúng.
-5. File cấu hình mẫu và dữ liệu thiết bị mẫu.
-6. File README hướng dẫn cài đặt, biên dịch, chạy và sử dụng.
-7. Hướng dẫn xuất bản ứng dụng thành file EXE hoặc thư mục triển khai độc lập.
-8. Bộ kiểm thử cho các chức năng mạng quan trọng.
-9. Danh sách các giới hạn kỹ thuật và các chức năng cần quyền quản trị.
-10. Hướng dẫn khắc phục các lỗi thường gặp.
+Cho phép mở nhiều cửa sổ Ping độc lập nếu bản gốc hỗ trợ, không để trạng thái của cửa sổ này ảnh hưởng cửa sổ khác.
 
-Không được chỉ tạo giao diện minh họa, mã giả, các hàm rỗng hoặc nút bấm không có chức năng.
+### Tracert
 
-Không được bỏ qua những lớp quan trọng bằng các chú thích như `TODO`, “triển khai sau” hoặc “viết tương tự”.
+Định nghĩa hàm `Show-TracertDialog` bằng PowerShell và .NET.
 
-Nếu không thể xuất trực tiếp file dự án, hãy cung cấp mã nguồn đầy đủ của từng file, ghi rõ đường dẫn và nội dung để có thể tạo lại dự án và biên dịch thành công.
+- Dò đường đi qua các chặng bằng ICMP TTL.
+- Hiển thị số thứ tự chặng, IP và thời gian phản hồi.
+- Hiển thị `*` khi timeout.
+- Có giới hạn số chặng và timeout.
+- Cho phép hủy thao tác.
+- Hiển thị kết quả theo thời gian thực nếu có thể.
+- Không làm treo giao diện.
+- Xử lý trường hợp router không phản hồi ICMP TTL Expired.
 
-## 10. Quy trình thực hiện
+## 6. Chức năng quản lý COM và USB
 
-Thực hiện dự án theo các giai đoạn:
+Định nghĩa hàm `Get-PortsAndUSB` và `Show-PortsDialog`.
 
-**Giai đoạn 1 – Phân tích:** Phân tích ảnh tham chiếu, xác định các cửa sổ, thành phần giao diện, chức năng và luồng dữ liệu.
+Hiển thị danh sách:
 
-**Giai đoạn 2 – Xây dựng giao diện:** Tạo cửa sổ chính, các cửa sổ con và bảng dữ liệu theo bố cục yêu cầu.
+- Cổng COM.
+- Tên và mô tả thiết bị.
+- Trạng thái thiết bị.
+- Thông tin bổ sung mà Windows cung cấp.
 
-**Giai đoạn 3 – Xây dựng nghiệp vụ:** Triển khai quản lý IP, Ping, quét mạng, thu thập thông tin card mạng, DNS, kiểm tra TCP và nhật ký.
+Không tự ý chiếm dụng cổng COM đang được ứng dụng khác sử dụng.
 
-**Giai đoạn 4 – Tích hợp:** Kết nối giao diện với các dịch vụ, xử lý tác vụ bất đồng bộ, đồng bộ trạng thái và hỗ trợ hủy.
+Nếu kiểm tra khả năng truy cập cổng, phải phân biệt rõ cổng không tồn tại, cổng đang bận và lỗi quyền truy cập.
 
-**Giai đoạn 5 – Kiểm thử:** Kiểm tra các trường hợp thành công, thất bại, timeout, lỗi quyền và khả năng phản hồi của giao diện.
+## 7. Chức năng máy in, photo và scanner
 
-**Giai đoạn 6 – Đóng gói:** Hoàn thiện tài liệu, cấu hình triển khai và hướng dẫn biên dịch thành ứng dụng Windows.
+Định nghĩa hàm `Show-PrinterDialog`.
 
-Sau mỗi giai đoạn, hãy kiểm tra tính nhất quán của mã nguồn trước khi tiếp tục.
+Thu thập dữ liệu máy in từ Windows, bao gồm:
 
-## 11. Tiêu chí nghiệm thu
+- Tên máy in.
+- Trạng thái.
+- Máy in mặc định.
+- Cổng kết nối.
+- Driver.
+- Thông tin chia sẻ nếu có.
 
-Phần mềm chỉ được xem là hoàn thành khi:
+Bổ sung khả năng nhận diện scanner nếu hệ thống hỗ trợ.
 
-- Giao diện tương đương về bố cục và chức năng với hình ảnh tham chiếu.
-- Tất cả các cửa sổ chức năng có thể mở, sử dụng và đóng bình thường.
-- Danh sách IP được lưu và tải lại thành công.
-- Ping và quét mạng hiển thị kết quả thực tế.
-- Các tác vụ không làm treo giao diện.
-- Chức năng Dừng có hiệu lực.
-- Nhật ký ghi nhận đúng hoạt động và lỗi.
-- Dữ liệu tiếng Việt được lưu và đọc chính xác.
-- Ứng dụng có thể biên dịch thành công trên môi trường đã chọn.
-- Không có lỗi nghiêm trọng làm mất dữ liệu hoặc khiến ứng dụng không thể sử dụng.
+Không hiển thị thông tin giả hoặc khẳng định scanner đã được nhận diện khi API được sử dụng không cung cấp dữ liệu đó.
 
-**Yêu cầu cuối cùng:** Hãy bắt đầu bằng việc phân tích ảnh giao diện, đề xuất sơ đồ các cửa sổ và cấu trúc dự án. Sau đó triển khai lần lượt từng thành phần thành mã nguồn thực tế, có thể biên dịch, chạy và kiểm thử. Ưu tiên tính ổn định, hiệu năng và khả năng sử dụng thực tế trong mạng nội bộ cơ quan hơn các hiệu ứng đồ họa không cần thiết.
+## 8. Chức năng quản lý ứng dụng đang chạy
+
+Định nghĩa hàm `Show-AppProcessDialog`.
+
+Đọc `AppProcess.csv` và giữ đúng cấu trúc cột của file gốc sau khi kiểm tra dữ liệu thực tế.
+
+Hiển thị:
+
+- Tên tiến trình.
+- Tên đầy đủ.
+- Trạng thái đang chạy hoặc không chạy.
+- Nút tắt.
+- Nút khởi động lại.
+
+Trước khi tắt tiến trình, yêu cầu người dùng xác nhận.
+
+Khi khởi động lại, phải xác định được đường dẫn thực thi hợp lệ. Không tự ý tắt tiến trình hệ thống quan trọng, không kết thúc toàn bộ tiến trình trùng tên và không truyền dữ liệu tùy ý vào lệnh shell.
+
+Nếu không đủ quyền hoặc không tìm được đường dẫn ứng dụng, phải hiển thị thông báo rõ ràng.
+
+## 9. Chức năng thông tin hệ thống
+
+Định nghĩa hàm `Show-SystemInfoDialog`.
+
+Hiển thị thông tin máy tính, hệ điều hành, CPU, RAM, ổ đĩa và các thông tin hệ thống có trong mã nguồn gốc.
+
+Sử dụng CIM/WMI hoặc API Windows phù hợp với PowerShell 5.1.
+
+Không thực hiện truy vấn kéo dài trực tiếp trên UI thread. Có xử lý lỗi nếu không đọc được một trường thông tin.
+
+## 10. Chức năng sao lưu profile
+
+Định nghĩa hàm đầy đủ `Show-BackupDialog`.
+
+Giữ lại các nhóm dữ liệu sao lưu trong mã nguồn gốc, bao gồm:
+
+- Desktop.
+- Documents.
+- Downloads.
+- Chrome Profile.
+- Edge Profile.
+- Sticky Notes.
+- Tệp cấu hình ứng dụng KSS.
+
+Giữ nguyên các đường dẫn, cấu trúc thư mục và quy tắc đặt tên bản sao lưu sau khi đối chiếu mã nguồn thực tế.
+
+Giao diện cần có:
+
+- Checkbox lựa chọn dữ liệu.
+- Chọn thư mục đích.
+- Thống kê dung lượng.
+- Thanh tiến trình.
+- Nhật ký sao lưu.
+- Thống kê thành công và thất bại.
+- Nút bắt đầu và đóng.
+
+Giữ cơ chế ưu tiên 7-Zip nếu có và ZIP nếu không có 7-Zip, tương thích với cách triển khai trong mã nguồn gốc.
+
+Không báo thành công khi có file bị bỏ qua do lỗi. Phải thông báo rõ dữ liệu nào đã sao lưu, dữ liệu nào thất bại và nguyên nhân nếu xác định được.
+
+## 11. Chức năng phục hồi profile
+
+Định nghĩa hàm đầy đủ `Show-RestoreDialog`.
+
+Hỗ trợ nguồn phục hồi theo những định dạng thực sự được mã nguồn gốc hỗ trợ, bao gồm thư mục sao lưu, ZIP và 7z nếu có.
+
+Cho phép:
+
+- Chọn nguồn.
+- Chọn các mục cần phục hồi.
+- Xác nhận trước khi ghi đè.
+- Theo dõi tiến trình.
+- Xem nhật ký kết quả.
+
+Bắt buộc kiểm tra đường dẫn khi giải nén, ngăn path traversal, không tự ý xóa toàn bộ profile hiện tại và không ghi đè dữ liệu nếu chưa được xác nhận.
+
+Khi phát sinh lỗi giữa chừng, hiển thị trạng thái phục hồi thực tế và thông tin cần thiết để xử lý tiếp.
+
+## 12. Yêu cầu kỹ thuật riêng cho PowerShell
+
+Tất cả mã nguồn phải tương thích Windows PowerShell 5.1.
+
+Tuân thủ các nguyên tắc:
+
+- Sử dụng `Add-Type -AssemblyName System.Windows.Forms` và `System.Drawing` khi cần.
+- Dùng biến `$script:` hoặc đối tượng trạng thái dùng chung có kiểm soát.
+- Không để các event handler vô tình mất trạng thái do phạm vi biến.
+- Không cập nhật WinForms control trực tiếp từ thread nền.
+- Quản lý Timer, Job, Runspace và các đối tượng .NET đúng vòng đời.
+- Hạn chế dùng `Start-Job` cho những thao tác ngắn cần cập nhật giao diện thường xuyên nếu có phương án phù hợp hơn.
+- Dùng `try/catch/finally` tại các vị trí có khả năng phát sinh lỗi.
+- Giải phóng các đối tượng IDisposable đúng cách.
+- Không dùng `Invoke-Expression` cho dữ liệu đầu vào không đáng tin cậy.
+- Không yêu cầu quyền Administrator nếu chức năng không cần quyền đó.
+- Không tự động thay đổi IP, DNS, firewall hoặc cấu hình hệ thống ngoài phạm vi nghiệp vụ gốc.
+- Không sử dụng mã hóa hoặc làm rối mã nguồn để che giấu hành vi của ứng dụng.
+
+Ưu tiên cấu trúc hàm rõ ràng, tên hàm nhất quán và chú thích tiếng Việt.
+
+## 13. Cấu trúc và khả năng chạy độc lập
+
+Ưu tiên đọc dữ liệu từ thư mục chứa script bằng `$PSScriptRoot`, không phụ thuộc thư mục làm việc hiện tại.
+
+Khi chạy từ shortcut hoặc một thư mục khác, ứng dụng vẫn phải tìm đúng file CSV.
+
+Nếu thiếu file dữ liệu, thông báo cụ thể và cung cấp hướng dẫn khắc phục; không âm thầm tạo dữ liệu giả.
+
+Có thể cung cấp script đóng gói EXE nếu cần, nhưng file `.ps1` vẫn phải là mã nguồn chính và có thể chạy độc lập trên máy Windows đáp ứng yêu cầu.
+
+## 14. Kiểm thử và xử lý lỗi
+
+Kiểm thử các trường hợp:
+
+- Thiếu hoặc sai định dạng CSV.
+- IP không hợp lệ.
+- Mất kết nối mạng.
+- Ping timeout.
+- Nhiều card mạng hoặc VPN.
+- Đóng cửa sổ trong lúc chạy tác vụ.
+- Không có thiết bị COM/USB.
+- Không có máy in.
+- Tiến trình không tồn tại hoặc không đủ quyền.
+- Sao lưu bị lỗi truy cập file.
+- Không có 7-Zip.
+- File phục hồi lỗi hoặc đường dẫn không an toàn.
+- Các lỗi Timer và event handler.
+- Ứng dụng hoạt động lâu mà không rò rỉ tài nguyên.
+
+Không chỉ kiểm tra bằng cách đọc code. Hãy chạy thử trên Windows khi môi trường cho phép, sửa lỗi thực tế và báo cáo trung thực các trường hợp chưa thể kiểm thử.
+
+## 15. Quy trình thực hiện
+
+**Giai đoạn 1:** Đọc toàn bộ mã nguồn gốc và lập bảng chức năng.
+
+**Giai đoạn 2:** Xác định các hàm, biến dùng chung, event handler, Timer và phụ thuộc.
+
+**Giai đoạn 3:** Xây dựng phiên bản PowerShell mới, giữ các chức năng gốc và cải thiện những điểm yếu.
+
+**Giai đoạn 4:** Kiểm tra từng chức năng riêng biệt.
+
+**Giai đoạn 5:** Tích hợp toàn bộ giao diện, xử lý lỗi và quản lý tài nguyên.
+
+**Giai đoạn 6:** Chạy thử, sửa lỗi và kiểm tra hồi quy.
+
+**Giai đoạn 7:** Bàn giao mã nguồn, file dữ liệu mẫu cần thiết và hướng dẫn sử dụng.
+
+Không dừng lại ở việc phân tích, đề xuất hoặc viết các đoạn code minh họa. Hãy trực tiếp tạo và hoàn thiện file mã nguồn trong môi trường làm việc được cung cấp.
+
+## 16. Tiêu chí nghiệm thu
+
+Sản phẩm được xem là đạt yêu cầu khi:
+
+1. Sử dụng PowerShell + WinForms làm công nghệ chính.
+2. Có đầy đủ các chức năng trọng yếu của mã nguồn gốc.
+3. Giao diện và cách sử dụng tương tự công cụ tham chiếu.
+4. Ping và Tracert hoạt động với dữ liệu mạng thực tế.
+5. Các file CSV được đọc đúng.
+6. Sao lưu và phục hồi có kiểm soát lỗi.
+7. Giao diện không bị treo khi thực hiện tác vụ nền.
+8. Có cơ chế dừng tác vụ và giải phóng tài nguyên.
+9. Không có nút chức năng chỉ mang tính minh họa.
+10. Có báo cáo những chức năng đã kiểm thử và các giới hạn còn lại.
